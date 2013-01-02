@@ -26,7 +26,7 @@ class Model(object):
 
         class_name = class_name.lower()
 
-        return [("%s_%s" % (class_name, "_".join(index)), index) for index in indexes]
+        return [("{}_{}".format(class_name, "_".join(index)), index) for index in indexes]
 
     @classmethod
     def _get_largest_index(cls, fields):
@@ -94,12 +94,12 @@ class Model(object):
         table_name = cls.__name__.lower()
         if not index:
             # Look through every row.
-            statement = """SELECT * FROM %s;""" % table_name
+            statement = """SELECT * FROM {};""".format(table_name)
             cursor.execute(statement)
         elif index == ["id"]:
             # If the object id is in the parameters, use only that, since it's
             # the fastest thing we can do.
-            statement = """SELECT * FROM %s WHERE uuid=?;""" % table_name
+            statement = """SELECT * FROM {} WHERE uuid=?;""".format(table_name)
             cursor.execute(statement, (parameters["id"],))
             del parameters["id"]
         else:
@@ -136,21 +136,21 @@ class Model(object):
         Create the necessary tables in the database.
         """
         cursor = cls._get_cursor()
-        cursor.execute("""CREATE TABLE IF NOT EXISTS %s ( "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, "uuid" TEXT NOT NULL, "data" BLOB NOT NULL);""" % cls.__name__.lower())
-        cursor.execute("""CREATE UNIQUE INDEX IF NOT EXISTS "%s_uuid_index" on %s (uuid ASC)""" % (cls.__name__.lower(), cls.__name__.lower()))
+        cursor.execute("""CREATE TABLE IF NOT EXISTS {} ( "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, "uuid" TEXT NOT NULL, "data" BLOB NOT NULL);""".format(cls.__name__.lower()))
+        cursor.execute("""CREATE UNIQUE INDEX IF NOT EXISTS "{}_uuid_index" on {} (uuid ASC)""".format(cls.__name__.lower(), cls.__name__.lower()))
 
         for index in cls.Meta.indexes:
             # Create an index table.
-            table_name = "%s_%s" % (cls.__name__.lower(), "_".join(index))
-            statement = """CREATE TABLE IF NOT EXISTS %s ( "uuid" TEXT NOT NULL""" % table_name
+            table_name = "{}_{}".format(cls.__name__.lower(), "_".join(index))
+            statement = """CREATE TABLE IF NOT EXISTS {} ( "uuid" TEXT NOT NULL""".format(table_name)
             for field in index:
-                statement += """, "%s" TEXT""" % field
+                statement += """, "{}" TEXT""".format(field)
             statement += ")"
             cursor.execute(statement)
 
             # Create the index table index.
             fields = " ASC, ".join(index)
-            statement = """CREATE INDEX IF NOT EXISTS "%s_index" on %s (%s ASC)""" % (table_name, table_name, fields)
+            statement = """CREATE INDEX IF NOT EXISTS "{}_index" on {} ({} ASC)""".format(table_name, table_name, fields)
             cursor.execute(statement)
 
 
@@ -192,7 +192,7 @@ class Model(object):
         values.insert(0, self.id)
 
         # Construct the SQL statement.
-        statement = """INSERT OR REPLACE INTO %s ("uuid", "%s") VALUES (%s);""" % (table_name, '", "'.join(field_names), ("?, " * len(values))[:-2])
+        statement = """INSERT OR REPLACE INTO {0} ("uuid", "{1}") VALUES ({2});""".format(table_name, '", "'.join(field_names), ("?, " * len(values))[:-2])
 
         cursor.execute(statement, values)
 
@@ -204,14 +204,14 @@ class Model(object):
 
         if self.__dict__.get("id", None) is None:
             object_id = uuid.uuid4().hex
-            statement = """INSERT INTO %s ("uuid", "data") VALUES (?, ?)""" % self.__class__.__name__.lower()
+            statement = """INSERT INTO {} ("uuid", "data") VALUES (?, ?)""".format(self.__class__.__name__.lower())
             cursor.execute(statement, (object_id, self._serializer.dumps(self.__dict__)))
         else:
             # Temporarily delete the id so it doesn't get stored.
             object_id = self.id
             del self.id
 
-            statement = """UPDATE %s SET "data" = ? WHERE "uuid" = ?""" % self.__class__.__name__.lower()
+            statement = """UPDATE {} SET "data" = ? WHERE "uuid" = ?""".format(self.__class__.__name__.lower())
             cursor.execute(statement, (self._serializer.dumps(self.__dict__), object_id))
 
         # Restore the id.
@@ -236,7 +236,7 @@ class Model(object):
 
         # And delete the rows from all of them.
         for table_name in table_names:
-            statement = """DELETE FROM %s WHERE "uuid" == ?""" % table_name
+            statement = """DELETE FROM {} WHERE "uuid" == ?""".format(table_name)
             cursor.execute(statement, (self.id, ))
 
         if commit:
