@@ -165,7 +165,8 @@ class Model(object):
         """
         Initialize with properties.
         """
-        self.__dict__ = kwargs
+        for k,v in kwargs.items():
+            setattr(self, k, v)
 
     def __eq__(self, other):
         """
